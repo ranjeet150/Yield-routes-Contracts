@@ -1,0 +1,13 @@
+# Rust / Soroban
+/target/
+Cargo.lock
+*.wasm
+
+# Deployment artifacts (contract IDs, keys) — never commit these
+.soroban/
+deployer.json
+
+# OS
+.DS_Store
+*.swp
+Thumbs.db

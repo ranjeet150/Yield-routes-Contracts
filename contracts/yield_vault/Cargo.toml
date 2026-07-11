@@ -1,0 +1,15 @@
+[package]
+name = "yield-vault"
+version = "0.1.0"
+edition = "2021"
+description = "SEP-56 tokenized auto-compounding yield vault (yrUSDC)"
+license = "Apache-2.0"
+repository = "https://github.com/YOUR_ORG/yield-routes-contracts"
+[lib]
+crate-type = ["cdylib"]
+[dependencies]
+soroban-sdk = { workspace = true }
+[dev-dependencies]
+soroban-sdk = { workspace = true, features = ["testutils"] }
+[features]
+testutils = ["soroban-sdk/testutils"]

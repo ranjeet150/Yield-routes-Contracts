@@ -1,0 +1,46 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build contracts
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - uses: Swatinem/rust-cache@v2
+
+      - run: cargo build --release --target wasm32-unknown-unknown
+
+      - name: Run all tests
+        run: cargo test
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            target/wasm32-unknown-unknown/release/*.wasm
+          body: |
+            ## Release ${{ github.ref_name }}
+
+            ### Contract WASM files
+            Compiled from commit ${{ github.sha }}
+
+            ### Deployment
+            ```bash
+            ./scripts/deploy.sh testnet   # or mainnet
+            ./scripts/init-contracts.sh testnet
+            ```
+
+            See CHANGELOG.md for changes in this release.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
