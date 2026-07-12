@@ -1,6 +1,5 @@
 # Rust / Soroban
 /target/
-Cargo.lock
 *.wasm
 
 # Deployment artifacts (contract IDs, keys) — never commit these
