@@ -353,6 +353,11 @@ impl RouteAggregator {
         let token_out = token::Client::new(&env, &quote.token_out);
         token_out.transfer(&env.current_contract_address(), &sender, &actual_out);
 
+        // Delete quote after execution to prevent replay / reuse attacks within validity window
+        env.storage()
+            .persistent()
+            .remove(&DataKey::RouteQuote(quote_id));
+
         // Update stats
         let vol: i128 = env
             .storage()
@@ -547,5 +552,38 @@ mod tests {
             client.get_best_route(&ta, &tb, &100_000_i128, &3_u32);
         }));
         assert!(result.is_err(), "no route should panic");
+    }
+
+    #[test]
+    fn test_quote_cannot_be_replayed() {
+        let env = Env::default();
+        env.mock_all_auths();
+        env.ledger().set(LedgerInfo {
+            timestamp: 1000,
+            ..Default::default()
+        });
+        let (admin, fc, user, ta, tb, cid) = setup(&env);
+        let pool = Address::generate(&env);
+        StellarAssetClient::new(&env, &ta).mint(&user, &20_000_000_i128);
+        StellarAssetClient::new(&env, &tb).mint(&cid, &20_000_000_i128);
+        let client = RouteAggregatorClient::new(&env, &cid);
+        client.initialize(&admin, &fc, &10_u32);
+        client.register_pool(&ta, &tb, &pool);
+
+        let quote = client.get_best_route(&ta, &tb, &100_000_i128, &3_u32);
+        assert_eq!(quote.quote_id, 1);
+
+        // First execution succeeds
+        let result = client.execute_route(&user, &quote.quote_id, &0_i128);
+        assert_eq!(result.quote_id, 1);
+
+        // Quote is deleted from persistent storage
+        assert!(client.get_quote(&quote.quote_id).is_none());
+
+        // Second execution with same quote must fail with QuoteNotFound
+        let repeat = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            client.execute_route(&user, &quote.quote_id, &0_i128);
+        }));
+        assert!(repeat.is_err(), "quote replay must be rejected");
     }
 }
